@@ -50,16 +50,16 @@ limit 1;
 7. For each customer, how many delivered pizzas had at least 1 change and how many had no changes?
 ```sql
 select customer_id,  
-SUM(CASE WHEN ((exclusions IS NOT NULL AND exclusions <> 'null' AND LENGTH(exclusions)>0)
-AND (extras IS NOT NULL AND extras <> 'null' AND LENGTH(extras)>0))=TRUE
-THEN 1
-ELSE 0
-END) as changes,
-SUM(CASE WHEN ((exclusions IS NOT NULL AND exclusions <> 'null' AND LENGTH(exclusions)>0)
-AND (extras IS NOT NULL AND extras <> 'null' AND LENGTH(extras)>0))=TRUE
-THEN 0
-ELSE 1
-END) as no_changes,
+sum(case when ((exclusions is not null and exclusions <> 'null' and length(exclusions)>0)
+and (extras is not null and extras <> 'null' and length(extras)>0))=TRUE
+then 1
+else 0
+end) as changes,
+sum(case when ((exclusions is not null and exclusions <> 'null' and length(exclusions)>0)
+and (extras is not null and extras <> 'null' and length(extras)>0))=TRUE
+then 0
+else 1
+end) as no_changes,
 count(pizza_id)
 from customer_orders co join runner_orders ro 
 on co.order_id=ro.order_id
@@ -84,7 +84,10 @@ count(pizza_id)
 from customer_orders
 group by extract(hour from order_time)
 ;
--- What was the volume of orders for each day of the week?
+```
+
+10. What was the volume of orders for each day of the week?
+```sql
 select extract(dow from order_time) as day_num,--DATE_PART('dow', order_time)
 count(pizza_id) 
 from customer_orders
