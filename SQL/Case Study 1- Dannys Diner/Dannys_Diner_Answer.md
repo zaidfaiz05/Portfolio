@@ -53,19 +53,19 @@ where order_date >= join_date
 group by s.customer_id, m.product_name;
 
 
-SELECT 
-    s.customer_id,
-    mn.product_name AS first_item_purchased,
-    s.order_date AS first_order_date
+select 
+s.customer_id,
+mn.product_name AS first_item_purchased,
+s.order_date AS first_order_date
 FROM sales s
 JOIN members m ON s.customer_id = m.customer_id
 JOIN menu mn ON s.product_id = mn.product_id
 WHERE s.order_date >= m.join_date
-  AND s.order_date = (
-      SELECT MIN(order_date)
-      FROM sales
-      WHERE customer_id = s.customer_id
-        AND order_date >= m.join_date
+AND s.order_date = (
+SELECT MIN(order_date)
+FROM sales
+WHERE customer_id = s.customer_id
+AND order_date >= m.join_date
   );
 
 ```
@@ -80,19 +80,19 @@ join menu m on m.product_id=s.product_id
 where order_date < join_date
 group by s.customer_id, m.product_name;
 
-SELECT 
-    s.customer_id,
-    mn.product_name AS item_purchased_before_membership,
-    s.order_date AS purchase_date
-FROM sales s
-JOIN members m ON s.customer_id = m.customer_id
-JOIN menu mn ON s.product_id = mn.product_id
-WHERE s.order_date < m.join_date
-  AND s.order_date = (
-      SELECT MAX(order_date)
-      FROM sales
-      WHERE customer_id = s.customer_id
-        AND order_date < m.join_date
+select 
+s.customer_id,
+mn.product_name as item_purchased_before_membership,
+s.order_date as purchase_date
+from sales s
+join members m on s.customer_id = m.customer_id
+join menu mn on s.product_id = mn.product_id
+where s.order_date < m.join_date
+and s.order_date = (
+select max(order_date)
+from sales
+where customer_id = s.customer_id
+and order_date < m.join_date
   );
 
 ```
@@ -119,39 +119,36 @@ order by customer_id;
 10. In the first week after a customer joins the program (including their join date) they earn 2x points on all items, not just sushi - how many points do customer A and B have at 
 the end of January?
 ```sql 
-WITH points_calculation AS (
-    SELECT 
-        s.customer_id,
-        s.order_date,
-        mn.product_name,
-        mn.price,
-        CASE 
-            WHEN s.order_date BETWEEN m.join_date AND m.join_date + INTERVAL '6 days' THEN mn.price * 2
-            ELSE mn.price
-        END AS points_earned
-    FROM sales s
-    JOIN members m ON s.customer_id = m.customer_id
-    JOIN menu mn ON s.product_id = mn.product_id
-    WHERE s.customer_id IN ('A', 'B')
-      AND s.order_date <= '2021-01-31'
+with points_calculation as (
+select 
+s.customer_id,
+s.order_date,
+mn.product_name,
+mn.price,
+case when s.order_date between m.join_date and m.join_date + interval '6 days' then mn.price * 2
+else mn.price
+end as points_earned
+from sales s
+join members m on s.customer_id = m.customer_id
+join menu mn on s.product_id = mn.product_id
+where s.customer_id IN ('A', 'B')
+and s.order_date <= '2021-01-31'
 )
-SELECT 
-    customer_id,
-    SUM(points_earned) AS total_points
-FROM points_calculation
-GROUP BY customer_id;
+select
+customer_id,
+sum(points_earned) as total_points
+from points_calculation
+group by customer_id;
 
-SELECT 
-    s.customer_id, 
-    SUM(
-        CASE 
-            WHEN order_date BETWEEN mm.join_date AND DATE_ADD(mm.join_date, INTERVAL 6 DAY) THEN m.price * 2 --(mm.join_date + INTERVAL '6' DAY)
-            ELSE m.price
-        END
-    ) AS total_points
-FROM sales s
-JOIN menu m ON s.product_id = m.product_id
-JOIN members mm ON s.customer_id = mm.customer_id
-WHERE MONTH(order_date) = 1 AND YEAR(order_date) = 2021
-GROUP BY s.customer_id;
+--select 
+--s.customer_id, 
+--sum(
+--case when order_date BETWEEN mm.join_date AND date_add(mm.join_date, interval 6 DAY) then m.price * 2 --(mm.join_date + interval '6' day)
+--else m.price
+--end) AS total_points
+--from sales s
+--join menu m on s.product_id = m.product_id
+--join members mm on s.customer_id = mm.customer_id
+--where month(order_date) = 1 and year(order_date) = 2021
+--group by s.customer_id;
 ```
