@@ -1,3 +1,5 @@
+Dataset: https://8weeksqlchallenge.com/case-study-1/
+
 1. What is the total amount each customer spent at the restaurant? - Customer A is the top customer with total spending of 76
 
 ```sql 
