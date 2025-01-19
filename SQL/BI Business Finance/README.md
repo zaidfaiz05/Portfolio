@@ -1,72 +1,72 @@
-# TITLE
+# Comprehensive SQL Analysis and Case Study: Identifying Key Drivers of GMV Growth at Shopee
 
 ## Part A:
 
 ### 1) Please provide the top 10% seller list (ranked by GMV) for each of the states in Malaysia, for the month of Jan’23.
 -  Data output should include seller’s shop id, total order & total GMV in that month.
 
-        WITH seller_stats AS (
-                SELECT 
+        with seller_stats as (
+                select 
                         seller_delivery_state,
                         shop_id,
-                        COUNT(order_id) AS total_order,
-                        SUM(gmv) AS total_gmv
-                FROM 
+                        count(order_id) AS total_order,
+                        sum(gmv) AS total_gmv
+                from 
                         order_table
-                WHERE 
-                        TO_CHAR(order_date, 'MON-YY') = 'JAN-23'
-                GROUP BY 
+                where 
+                        to_char(order_date, 'MON-YY') = 'JAN-23'
+                group by 
                         seller_delivery_state, shop_id
         ),
-        ranked_sellers AS (
-                SELECT 
+        ranked_sellers as (
+                select 
                         seller_delivery_state,
                         shop_id,
                         total_order,
                         total_gmv,
-                        RANK() OVER (PARTITION BY seller_delivery_state ORDER BY total_gmv DESC) AS rank,
-                        PERCENT_RANK() OVER (PARTITION BY seller_delivery_state ORDER BY total_gmv DESC) AS percent_rank
-                FROM 
+                        rank() over (partition by seller_delivery_state order by total_gmv DESC) as rank,
+                        percent_rank() over (partition by seller_delivery_state order by total_gmv desc) AS percent_rank
+                from 
                         seller_stats
         )
-        SELECT 
+        select 
                 seller_delivery_state,
                 shop_id,
                 total_order,
                 total_gmv
-        FROM 
+        from 
                 ranked_sellers
-        WHERE 
-                percent_rank <= 0.1 -- Top 10%
-                ORDER BY 
+        where 
+                percent_rank <= 0.1
+                order by
                 seller_delivery_state, rank;
 
 
 ### 2) Please provide the number of buyers who have purchased in Jan’23, and continued to purchase in the next 2 months (Feb’23 and Mar’23)
 - Data output should have the number of buyers for all 3 months.
 
-        SELECT COUNT(DISTINCT buyer_id) AS buyers_all_3_months
-        FROM order_table
-        WHERE TO_CHAR(order_date, 'MON-YY') IN ('JAN-23', 'FEB-23', 'MAR-23')
-        GROUP BY buyer_id
-        HAVING COUNT(DISTINCT TO_CHAR(order_date, 'MON-YY')) = 3;
+        select count(distinct buyer_id) as buyers_all_3_months
+        from order_table
+        where to_char(order_date, 'MON-YY') in ('JAN-23', 'FEB-23', 'MAR-23')
+        group by buyer_id
+        having count(distinct to_char(order_date, 'MON-YY')) = 3;
         ),
-        buyer_feb AS (
-        SELECT DISTINCT buyer_id
-        FROM order_table
-        WHERE TO_CHAR(order_date, 'MON-YY') = 'FEB-23'
+        buyer_feb as (
+        select distinct buyer_id
+        from order_table
+        where to_char(order_date, 'MON-YY') = 'FEB-23'
         ),
-        buyer_mar AS (
-        SELECT DISTINCT buyer_id
-        FROM order_table
-        WHERE TO_CHAR(order_date, 'MON-YY') = 'MAR-23'
+        buyer_mar as (
+        select distinct buyer_id
+        from order_table
+        where to_char(order_date, 'MON-YY') = 'MAR-23'
         )
-        SELECT COUNT(*) AS buyers_all_3_months
-        FROM buyer_jan
-        WHERE buyer_id IN (
-        SELECT buyer_id FROM buyer_feb
-        INTERSECT
-        SELECT buyer_id FROM buyer_mar
+        select count(*) as buyers_all_3_months
+        from buyer_jan
+        where buyer_id IN (
+        select buyer_id from buyer_feb
+        intersect
+        select buyer_id from buyer_mar
         );
 
 
@@ -74,18 +74,18 @@
 - Total revenue is defined as commission fee + ads spent by seller
 - Note that given ads spent data is at seller level, we have to apportion this back into order level to achieve the granularity required. The logic suggested for this study is to apportion by gmv.
 
-                WITH total_gmv AS (
+                with total_gmv as (
         -- Calculate total GMV for the seller
-        SELECT 
+        select 
                 shop_id, 
-                SUM(gmv) AS total_gmv
-        FROM order_table
-        WHERE shop_id = 788688
-        GROUP BY shop_id
+                SUM(gmv) as total_gmv
+        from order_table
+        where shop_id = 788688
+        group by shop_id
         ),
-        order_revenue AS (
+        order_revenue as (
         -- Calculate revenue for each order
-        SELECT 
+        select 
                 o.order_id,
                 o.shop_id,
                 o.gmv,
@@ -95,17 +95,17 @@
                 -- Apportion ads spent by GMV proportion and calculate total revenue
                 o.commission_fee + 
                 (o.gmv / t.total_gmv) * a.ads_spent AS total_revenue
-        FROM order_table o
-        JOIN ads_table a ON o.shop_id = a.shop_id
-        JOIN total_gmv t ON o.shop_id = t.shop_id
-        WHERE o.shop_id = 788688
+        from order_table o
+        join ads_table a on o.shop_id = a.shop_id
+        join total_gmv t on o.shop_id = t.shop_id
+        where o.shop_id = 788688
         )
         -- Final result: List of orders with total revenue
-        SELECT 
+        select 
         order_id, 
         total_revenue
-        FROM order_revenue
-        ORDER BY order_id;
+        from order_revenue
+        order BY order_id;
 
 ## Part B: Case Study
 ### Case: Shopee sees a month-on-month growth of +10% in GMV from Jan to Feb, what is contributing to the growth?
@@ -134,58 +134,58 @@ Order Volume:
 
 - From the order_table, count the number of orders in January (JAN-23) and February (FEB-23).
 
-        SELECT 
-        TO_CHAR(order_date, 'MON-YY') AS month, 
-        COUNT(order_id) AS total_orders
-        FROM order_table
-        WHERE TO_CHAR(order_date, 'MON-YY') IN ('JAN-23', 'FEB-23')
-        GROUP BY TO_CHAR(order_date, 'MON-YY');
+        select 
+        to_char(order_date, 'MON-YY') as month, 
+        count(order_id) as total_orders
+        from order_table
+        where to_char(order_date, 'MON-YY') in ('JAN-23', 'FEB-23')
+        group by to_char(order_date, 'MON-YY');
 
 Average Order Value (AOV):
 
 - Calculate the average GMV per order for both months.
 
-        SELECT 
-        TO_CHAR(order_date, 'MON-YY') AS month, 
-        AVG(gmv) AS avg_order_value
-        FROM order_table
-        WHERE TO_CHAR(order_date, 'MON-YY') IN ('JAN-23', 'FEB-23')
-        GROUP BY TO_CHAR(order_date, 'MON-YY');
+        select 
+        to_char(order_date, 'MON-YY') as month, 
+        avg(gmv) as avg_order_value
+        from order_table
+        where to_char(order_date, 'MON-YY') IN ('JAN-23', 'FEB-23')
+        group by to_char(order_date, 'MON-YY');
 
 
 Ads Spent:
 - Sum the ads_spent for the seller and compare across the two months to see if increased advertising correlates with higher GMV.
 
-                SELECT 
-                TO_CHAR(transaction_date, 'MON-YY') AS month, 
-                SUM(ads_spent) AS total_ads_spent
-                FROM ads_table
-                WHERE TO_CHAR(transaction_date, 'MON-YY') IN ('JAN-23', 'FEB-23')
-                GROUP BY TO_CHAR(transaction_date, 'MON-YY');
+                select 
+                to_char(transaction_date, 'MON-YY') as month, 
+                sum(ads_spent) as total_ads_spent
+                from ads_table
+                where to_char(transaction_date, 'MON-YY') in ('JAN-23', 'FEB-23')
+                group by to_char(transaction_date, 'MON-YY');
 
         Buyer Retention and Acquisition:
         - Identify the number of repeat buyers and new buyers in February compared to January.
 
         -- Repeat Buyers
-        SELECT 
-        COUNT(DISTINCT buyer_id) AS repeat_buyers
-        FROM order_table
-        WHERE TO_CHAR(order_date, 'MON-YY') = 'FEB-23'
-        AND buyer_id IN (
-        SELECT DISTINCT buyer_id
-        FROM order_table
-        WHERE TO_CHAR(order_date, 'MON-YY') = 'JAN-23'
+        select 
+        count(distinct buyer_id) as repeat_buyers
+        from order_table
+        where to_char(order_date, 'MON-YY') = 'FEB-23'
+        and buyer_id in (
+        select distinct buyer_id
+        from order_table
+        where to_char(order_date, 'MON-YY') = 'JAN-23'
         );
 
         -- New Buyers
-        SELECT 
-        COUNT(DISTINCT buyer_id) AS new_buyers
-        FROM order_table
-        WHERE TO_CHAR(order_date, 'MON-YY') = 'FEB-23'
-        AND buyer_id NOT IN (
-        SELECT DISTINCT buyer_id
-        FROM order_table
-        WHERE TO_CHAR(order_date, 'MON-YY') = 'JAN-23'
+        select 
+        count(distinct buyer_id) as new_buyers
+        from order_table
+        where to_char(order_date, 'MON-YY') = 'FEB-23'
+        and buyer_id not in (
+        select distinct buyer_id
+        from order_table
+        where to_char(order_date, 'MON-YY') = 'JAN-23'
         );
 
 Step 3: Formulate Hypotheses
