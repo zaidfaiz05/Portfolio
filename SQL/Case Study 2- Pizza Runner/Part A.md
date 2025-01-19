@@ -1,3 +1,5 @@
+Dataset: https://8weeksqlchallenge.com/case-study-2/
+
 1. How many pizzas were ordered?
 ```sql
 select count(*) as pizza_ordered 
