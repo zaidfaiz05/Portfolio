@@ -1,12 +1,12 @@
 1. What are the standard ingredients for each pizza?
 ```sql
-SELECT pt.topping_name --count(distinct pizza_id)
-FROM pizza_recipes pr
-LEFT JOIN LATERAL 
-UNNEST(STRING_TO_ARRAY(pr.toppings, ', ')) AS topping ON TRUE
-JOIN pizza_toppings pt on pt.topping_id=topping::INTEGER
-GROUP BY pt.topping_name
-HAVING count(distinct pizza_id) = 2 ;
+select pt.topping_name --count(distinct pizza_id)
+from pizza_recipes pr
+left join lateral 
+unnest(string_to_array(pr.toppings, ', ')) as topping on true
+join pizza_toppings pt on pt.topping_id=topping::integer
+group by pt.topping_name
+having count(distinct pizza_id) = 2 ;
 ```
 
 
@@ -19,7 +19,7 @@ join pizza_toppings pt on pt.topping_id=extra::INTEGER
 where length(extra) > 0
 and extra <> 'null'
 group by topping_name
-order by count(distinct pizza_id) DESC
+order by count(distinct pizza_id) desc
 limit 1;
 ```
 
@@ -28,7 +28,7 @@ limit 1;
 select topping_name from customer_orders co
 left join lateral
 unnest(string_to_array(exclusions,', ')) as exclusion on true
-join pizza_toppings pt on pt.topping_id=exclusion::INTEGER
+join pizza_toppings pt on pt.topping_id=exclusion::integer
 where exclusion <> 'null'
 group by topping_name
 order by count(distinct pizza_id)
@@ -42,183 +42,182 @@ limit 1;
 -- Meat Lovers - Exclude Cheese, Bacon - Extra Mushroom, Peppers
 
 ```sql
-WITH EXTRAS AS (
-    SELECT
-        co.order_id,
-        co.pizza_id,
-        co.extras,
-        STRING_AGG(DISTINCT pt.topping_name, ', ') AS added_xtra
-    FROM customer_orders co
-    LEFT JOIN LATERAL 
-        UNNEST(STRING_TO_ARRAY(co.extras, ', ')) AS extra ON TRUE
-    JOIN pizza_toppings pt ON pt.topping_id = extra::INTEGER
-    WHERE LENGTH(extra) > 0
-      AND extra <> 'null'
-    GROUP BY co.order_id, co.pizza_id, co.extras
-    ORDER BY co.order_id DESC
+with extras AS (
+select
+co.order_id,
+co.pizza_id,
+co.extras,
+string_agg(distinct pt.topping_name, ', ') as added_xtra
+from customer_orders co
+left join lateral 
+unnest(string_to_array(co.extras, ', ')) as extra on true
+join pizza_toppings pt on pt.topping_id = extra::integer
+where length(extra) > 0
+nd extra <> 'null'
+group by co.order_id, co.pizza_id, co.extras
+order by co.order_id desc
 ),
-EXCLUDED AS (
-    SELECT
-        co.order_id,
-        co.pizza_id,
-        co.exclusions,
-        STRING_AGG(DISTINCT pt.topping_name, ', ') AS excluded
-    FROM customer_orders co
-    LEFT JOIN LATERAL 
-        UNNEST(STRING_TO_ARRAY(co.exclusions, ', ')) AS extra ON TRUE
-    JOIN pizza_toppings pt ON pt.topping_id = extra::INTEGER
-    WHERE LENGTH(extra) > 0
-      AND extra <> 'null'
-    GROUP BY co.order_id, co.pizza_id, co.exclusions
-    ORDER BY co.order_id DESC
+excluded as (
+select
+co.order_id,
+co.pizza_id,
+co.exclusions,
+string_agg(distinct pt.topping_name, ', ') as excluded
+from customer_orders co
+left join lateral 
+unnest(string_to_array(co.exclusions, ', ')) as extra on true
+join pizza_toppings pt on pt.topping_id = extra::integer
+where length(extra) > 0
+and extra <> 'null'
+group by co.order_id, co.pizza_id, co.exclusions
+order by co.order_id DESC
 )
-SELECT
-    co.order_id,
-    CONCAT(CASE WHEN pn.pizza_name='Meatlovers' THEN 'Meat Lovers' ELSE pn.pizza_name END,
-    COALESCE(' - Extra ' || ext.added_xtra,''),
-    COALESCE(' - Exclude ' ||exc.excluded,'')) as order_details
-FROM customer_orders co
-LEFT JOIN EXTRAS ext ON ext.order_id = co.order_id AND ext.pizza_id = co.pizza_id AND ext.extras = co.extras
-LEFT JOIN EXCLUDED exc ON exc.order_id = co.order_id AND exc.pizza_id = co.pizza_id AND exc.exclusions = co.exclusions
-JOIN pizza_names pn on pn.pizza_id=co.pizza_id
+select
+co.order_id,
+Concat(case when pn.pizza_name='Meatlovers' then 'Meat Lovers' else pn.pizza_name END,
+coalesce(' - Extra ' || ext.added_xtra,''),
+coalesce(' - Exclude ' ||exc.excluded,'')) as order_details
+from customer_orders co
+left join extras ext om ext.order_id = co.order_id and ext.pizza_id = co.pizza_id and ext.extras = co.extras
+left join excluded exc on exc.order_id = co.order_id AND exc.pizza_id = co.pizza_id and exc.exclusions = co.exclusions
+join pizza_names pn on pn.pizza_id=co.pizza_id
 ```
 
 5. Generate an alphabetically ordered comma separated ingredient list for each pizza order from the customer_orders table and add a 2x in front of any relevant ingredients
 -- For example: "Meat Lovers: 2xBacon, Beef, ... , Salami"
 ```sql
-WITH EXCLUSIONS AS (
-    SELECT 
-        co.order_id,
-        co.pizza_id,
-        S.value::INTEGER AS topping_id
-    FROM customer_orders AS co
-    LEFT JOIN LATERAL UNNEST(STRING_TO_ARRAY(co.exclusions, ', ')) AS S(value) ON TRUE
-    WHERE LENGTH(S.value) > 0 AND S.value <> 'null'
+with exclusions as (
+select 
+co.order_id,
+co.pizza_id,
+S.value::integer as topping_id
+from customer_orders as co
+left join lateral unnest(string_to_array(co.exclusions, ', ')) as S(value) on true
+where length(S.value) > 0 and S.value <> 'null'
 ),
-EXTRAS AS (
-    SELECT 
-        co.order_id,
-        co.pizza_id,
-        S.value::INTEGER AS topping_id,
-        pt.topping_name
-    FROM customer_orders AS co
-    LEFT JOIN LATERAL UNNEST(STRING_TO_ARRAY(co.extras, ', ')) AS S(value) ON TRUE
-    INNER JOIN pizza_toppings AS pt ON pt.topping_id = S.value::INTEGER
-    WHERE LENGTH(S.value) > 0 AND S.value <> 'null'
+extras as (
+select 
+co.order_id,
+co.pizza_id,
+S.value::integer as topping_id,
+pt.topping_name
+from customer_orders as co
+left join lateral unnest(string_to_array(co.extras, ', ')) as S(value) on true
+inner join pizza_toppings as pt on pt.topping_id = S.value::integer
+where length(S.value) > 0 and S.value <> 'null'
 ),
-ORDERS AS (
-    SELECT DISTINCT
-        co.order_id,
-        co.pizza_id,
-        S.value::INTEGER AS topping_id,
-        pt.topping_name
-    FROM customer_orders AS co
-    INNER JOIN pizza_recipes AS pr ON co.pizza_id = pr.pizza_id
-    LEFT JOIN LATERAL UNNEST(STRING_TO_ARRAY(pr.toppings, ', ')) AS S(value) ON TRUE
-    INNER JOIN pizza_toppings AS pt ON pt.topping_id = S.value::INTEGER
+orders as (
+select distinct
+co.order_id,
+co.pizza_id,
+S.value::integer as topping_id,
+pt.topping_name
+from customer_orders as co
+inner join pizza_recipes as pr on co.pizza_id = pr.pizza_id
+left join lateral unnest(string_to_array(pr.toppings, ', ')) as S(value) on true
+inner join pizza_toppings as pt on pt.topping_id = S.value::integer
 ),
-ORDERS_WITH_EXTRAS_AND_EXCLUSIONS AS (
-    SELECT 
-        o.order_id,
-        o.pizza_id,
-        o.topping_id,
-        o.topping_name
-    FROM ORDERS AS o
-    LEFT JOIN EXCLUSIONS AS exc ON exc.order_id = o.order_id AND exc.pizza_id = o.pizza_id AND exc.topping_id = o.topping_id
-    WHERE exc.topping_id IS NULL
+orders_with_extras_and_exclusions as (
+select 
+o.order_id,
+o.pizza_id,
+o.topping_id,
+o.topping_name
+from orders as o
+left join exclusions as exc on exc.order_id = o.order_id and exc.pizza_id = o.pizza_id and exc.topping_id = o.topping_id
+where exc.topping_id is null
 
-    UNION ALL 
+union all 
 
-    SELECT 
-        e.order_id,
-        e.pizza_id,
-        e.topping_id,
-        e.topping_name
-    FROM EXTRAS AS e
+select 
+e.order_id,
+e.pizza_id,
+e.topping_id,
+e.topping_name
+from extras as e
 ),
-TOPPING_COUNT AS (
-    SELECT 
-        o.order_id,
-        o.pizza_id,
-        o.topping_name,
-        COUNT(*) AS n
-    FROM ORDERS_WITH_EXTRAS_AND_EXCLUSIONS AS o
-    GROUP BY 
-        o.order_id,
-        o.pizza_id,
-        o.topping_name
+topping_count as (
+select 
+o.order_id,
+o.pizza_id,
+o.topping_name,
+count(*) as n
+from orders_with_extras_and_exclusions as o
+group by 
+o.order_id,
+o.pizza_id,
+o.topping_name
 )
-SELECT 
-    order_id,
-    pizza_id,
-    STRING_AGG(
-        CASE
-            WHEN n > 1 THEN n || 'x' || topping_name
-            ELSE topping_name
-        END, ', '
-    ) AS ingredient
-FROM TOPPING_COUNT
-GROUP BY order_id, pizza_id;
+select 
+order_id,
+pizza_id,
+string_agg(
+case when n > 1 then n || 'x' || topping_name
+else topping_name
+end, ', '
+    ) s ingredient
+from TOPPING_COUNT
+group by order_id, pizza_id;
 ```
 
 6. What is the total quantity of each ingredient used in all delivered pizzas sorted by most frequent first?
 ```sql
-WITH EXCLUSIONS AS (
-    SELECT 
-        co.order_id,
-        co.pizza_id,
-        S.value::INTEGER AS topping_id
-    FROM customer_orders AS co
-    LEFT JOIN LATERAL UNNEST(STRING_TO_ARRAY(co.exclusions, ', ')) AS S(value) ON TRUE
-    WHERE LENGTH(S.value) > 0 AND S.value <> 'null'
+with exclusions as (
+select 
+co.order_id,
+co.pizza_id,
+S.value::INTEGER as topping_id
+from, customer_orders  co
+left join lateral unnest(string_to_array(co.exclusions, ', ')) as S(value) on true
+where length(S.value) > 0 and S.value <> 'null'
 ),
-EXTRAS AS (
-    SELECT 
-        co.order_id,
-        co.pizza_id,
-        S.value::INTEGER AS topping_id,
-        pt.topping_name
-    FROM customer_orders AS co
-    LEFT JOIN LATERAL UNNEST(STRING_TO_ARRAY(co.extras, ', ')) AS S(value) ON TRUE
-    INNER JOIN pizza_toppings AS pt ON pt.topping_id = S.value::INTEGER
-    WHERE LENGTH(S.value) > 0 AND S.value <> 'null'
+extras as (
+select
+co.order_id,
+co.pizza_id,
+S.value::INTEGER AS topping_id,
+pt.topping_name
+from customer_orders AS co
+left join lateral unnest(string_to_array(co.extras, ', ')) as S(value) on true
+inner join pizza_toppings  pt on pt.topping_id = S.value::INTEGER
+where length(S.value) > 0 and S.value <> 'null'
 ),
-ORDERS AS (
-    SELECT DISTINCT
-        co.order_id,
-        co.pizza_id,
-        S.value::INTEGER AS topping_id,
-        pt.topping_name
-    FROM customer_orders AS co
-    INNER JOIN pizza_recipes AS pr ON co.pizza_id = pr.pizza_id
-    LEFT JOIN LATERAL UNNEST(STRING_TO_ARRAY(pr.toppings, ', ')) AS S(value) ON TRUE
-    INNER JOIN pizza_toppings AS pt ON pt.topping_id = S.value::INTEGER
+orders as (
+select distinct
+co.order_id,
+co.pizza_id,
+S.value::INTEGER as topping_id,
+pt.topping_name
+from customer_orders  co
+inner join pizza_recipes  pr on co.pizza_id = pr.pizza_id
+left join lateral unnest(string_to_array(pr.toppings, ', ')) AS S(value) on true
+inner join pizza_toppings pt on pt.topping_id = S.value::INTEGER
 ),
-ORDERS_WITH_EXTRAS_AND_EXCLUSIONS AS (
-    SELECT 
-        o.order_id,
-        o.pizza_id,
-        o.topping_id,
-        o.topping_name
-    FROM ORDERS AS o
-    LEFT JOIN EXCLUSIONS AS exc ON exc.order_id = o.order_id AND exc.pizza_id = o.pizza_id AND exc.topping_id = o.topping_id
-    WHERE exc.topping_id IS NULL
+orders_with_extras_exclusions as (
+select 
+o.order_id,
+o.pizza_id,
+o.topping_id,
+o.topping_name
+from orders o
+left join exclusions exc on exc.order_id = o.order_id and exc.pizza_id = o.pizza_id and exc.topping_id = o.topping_id
+where exc.topping_id IS NULL
 
-    UNION ALL 
+union all
 
-    SELECT 
-        e.order_id,
-        e.pizza_id,
-        e.topping_id,
-        e.topping_name
-    FROM EXTRAS AS e
+select 
+ e.order_id,
+ e.pizza_id,
+ e.topping_id,
+ e.topping_name
+ from extras as e
 )
 
-Select 
+select 
 topping_name,
 count(topping_id)
-from ORDERS_WITH_EXTRAS_AND_EXCLUSIONS o
-INNER JOIN runner_orders as ro on o.order_id = ro.order_id
+from orders_with_extras_exclusions o
+inner join runner_orders as ro on o.order_id = ro.order_id
 where cancellation is null
 or cancellation = 'null'
 or cancellation= ''
