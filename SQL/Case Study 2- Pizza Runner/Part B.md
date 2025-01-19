@@ -1,30 +1,30 @@
 1. How many runners signed up for each 1 week period? (i.e. week starts 2021-01-01)
 ```sql
-SELECT COUNT(*) AS runner_count, (DATE_TRUNC('week', registration_date) + INTERVAL '4 days')::DATE AS week
-FROM runners
-GROUP BY (DATE_TRUNC('week', registration_date) + INTERVAL '4 days')::DATE
-ORDER BY  week;
+select count(*) as runner_count, (date_trunc('week', registration_date) + interval '4 days')::date as week
+from runners
+group by (date_trunc('week', registration_date) + interval '4 days')::date
+order by  week;
 ```
  
 2. What was the average time in minutes it took for each runner to arrive at the Pizza Runner HQ to pickup the order?
 ```sql
-SELECT runner_id, ROUND(AVG(EXTRACT(EPOCH FROM (CAST(pickup_time AS TIMESTAMP)-order_time))/60)) AS avg_pickup_time_in_mins
-FROM runner_orders ro
-JOIN customer_orders co 
+select runner_id, round(avg(extract(epoch from (cast(pickup_time as timestamp)-order_time))/60)) as avg_pickup_time_in_mins
+from runner_orders ro
+join customer_orders co 
 on ro.order_id=co.order_id
-WHERE pickup_time <> 'null'
+where pickup_time <> 'null'
 group by runner_id;
 ```
 
 3. Is there any relationship between the number of pizzas and how long the order takes to prepare?
 ```sql
 with cte as(select co.order_id,count(pizza_id) as pizza_count,
--- ROUND(AVG(EXTRACT(EPOCH FROM (CAST(pickup_time AS TIMESTAMP)-order_time))/60)) AS avg_pickup_time_in_mins,
-ROUND(MAX(EXTRACT(EPOCH FROM (CAST(pickup_time AS TIMESTAMP) - order_time))/60)) AS max_pickup_time_in_mins
+-- round(avg(extract(epoch from (cast(pickup_time as timestamp)-order_time))/60)) as avg_pickup_time_in_mins,
+round(max(extract(epoch from (cast(pickup_time as timestamp) - order_time))/60)) as max_pickup_time_in_mins
 from customer_orders co
 join runner_orders ro 
 on co.order_id=ro.order_id
-WHERE pickup_time <> 'null'
+where pickup_time <> 'null'
 group by co.order_id)
 
 select pizza_count, avg(max_pickup_time_in_mins) from cte
