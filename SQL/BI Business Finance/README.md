@@ -1,4 +1,4 @@
-# Comprehensive SQL Analysis and Case Study: Identifying Key Drivers of GMV Growth at Shopee
+# Comprehensive SQL Analysis and Case Study: Identifying Key Drivers of GMV Growth at a Fictional Company
 
 ## Part A:
 
@@ -108,7 +108,7 @@
         order BY order_id;
 
 ## Part B: Case Study
-### Case: Shopee sees a month-on-month growth of +10% in GMV from Jan to Feb, what is contributing to the growth?
+### Case: The company sees a month-on-month growth of +10% in GMV from Jan to Feb, what is contributing to the growth?
 
 1. Write the problem statement & explain the method of approach
 Guide
